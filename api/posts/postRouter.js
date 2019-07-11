@@ -1,12 +1,12 @@
 import express from 'express';
-import Posts from './postDb.js';
+import Posts from './postDb';
 import User from '../users/userDb';
-
+import validateId from '../../middlewares/validateId';
+import validatePost from '../../middlewares/validatePost';
 
 const postsRoutes = express.Router();
 
-
-  postsRoutes.post('/posts/:id/', async (req, res) => {
+  postsRoutes.post('/:id', validateId, validatePost, async (req, res) => {
     const user = await User.getById(req.params.id);
     const { text } = req.body;
     const post = {
@@ -14,7 +14,7 @@ const postsRoutes = express.Router();
         text
     }
     try { 
-        if(user.length) {
+        if(user) {
             if(post) {
                 const newPost = await Posts.insert(post);
                return res.status(201).json({ message: "new post is posted successfully", data: post });
@@ -27,7 +27,7 @@ const postsRoutes = express.Router();
     }
   })
 
-  postsRoutes.get('/posts', async (req, res) => {
+  postsRoutes.get('/', async (req, res) => {
       try {
         const posts = await Posts.get(req.query);
         res.status(200).json(posts);
@@ -36,14 +36,14 @@ const postsRoutes = express.Router();
       }
   })
 
-  postsRoutes.get('/posts/:id', async (req, res) => {
+  postsRoutes.get('/:id', validateId,  async (req, res) => {
       const post = await Posts.getById(req.params.id);
 
       try {
-          if(post.length) {
+          if(post) {
               res.status(200).json(post)
           } else {
-              res.status(404).json({ message: `The post with the specified id ${req.params.id} does not exist.` })
+              res.status(404).json({ message: `The post with the specified id:${req.params.id} does not exist.` })
           }
       } catch(error) {
           res.status(500).json({ error: "The post information could not be retrieved." })
@@ -51,10 +51,10 @@ const postsRoutes = express.Router();
   })
 
 
-postsRoutes.delete('/posts/:id', async (req, res) => {
-    const item = await Posts.getById(Number(req.params.id));
+postsRoutes.delete('/:id', validateId, async (req, res) => {
+    const item = await Posts.getById(req.params.id);
     try {
-        if(item.length) {
+        if(item) {
             const post = await Posts.remove(Number(req.params.id));
             res.status(200).json({message: "This post has been deleted successfully",  post: item,})
         } else {
@@ -66,16 +66,18 @@ postsRoutes.delete('/posts/:id', async (req, res) => {
 
 })
 
-postsRoutes.put('/posts/:id', async (req,res) => {
+postsRoutes.put('/:id', validateId, validatePost, async (req,res) => {
     const { id } =req.params;
-    const { title, contents } = req.body;
-    const posts = await Posts.getById(Number(req.params.id));
+    const { text } = req.body;
     const post = {
-        title, contents
+        user_id: req.params.id,
+        text
     }
+    const posts = await Posts.getById(id);
+ 
     try {
 
-        if(posts.length) {
+        if(posts) {
             const updatedPost = await Posts.update(id, post);
             res.status(201).json({ message: "new post created successfully", updatedPost: { ...post} });
         } else {
@@ -87,33 +89,4 @@ postsRoutes.put('/posts/:id', async (req,res) => {
       }
 })
 
-
-  module.exports = postsRoutes;
-
-// const express = 'express';
-
-// const router = express.Router();
-
-// router.get('/', (req, res) => {
-
-// });
-
-// router.get('/:id', (req, res) => {
-
-// });
-
-// router.delete('/:id', (req, res) => {
-
-// });
-
-// router.put('/:id', (req, res) => {
-
-// });
-
-// // custom middleware
-
-// function validatePostId(req, res, next) {
-
-// };
-
-// module.exports = router;
+export default postsRoutes;
